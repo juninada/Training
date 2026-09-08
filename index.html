@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管制通信聴取訓練システム | ATC COMM TRAINER</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%230b1420' stroke='%2335d1e0' stroke-width='5'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%23ffb020' stroke-width='3'/%3E%3Cpath d='M50 20 L58 46 L50 40 L42 46 Z' fill='%23ffb020'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+
+<header class="app-header">
+  <div class="emblem" aria-hidden="true">
+    <svg viewBox="0 0 100 100" width="46" height="46">
+      <circle cx="50" cy="50" r="46" class="em-ring"/>
+      <circle cx="50" cy="50" r="46" class="em-sweep-mask"/>
+      <line x1="50" y1="50" x2="50" y2="6" class="em-sweep"/>
+      <circle cx="50" cy="50" r="30" class="em-ring-inner"/>
+      <path d="M50 20 L58 46 L50 40 L42 46 Z" class="em-mark"/>
+    </svg>
+  </div>
+  <div class="header-text">
+    <h1>管制通信聴取訓練システム</h1>
+    <p class="subtitle">AIR TRAFFIC COMM RECEPTION TRAINER — 実践ノイズ環境下 聴取・応答判断訓練</p>
+  </div>
+  <div class="header-status">
+    <span class="status-dot" id="engineStatus"></span>
+    <span id="engineStatusText">AUDIO ENGINE STANDBY</span>
+  </div>
+</header>
+
+<main class="console">
+
+  <!-- ============ LEFT: SOURCE / PLAYBACK ============ -->
+  <section class="panel panel-source">
+    <h2 class="panel-title">01 / 音声ソース <span class="panel-title-en">SOURCE</span></h2>
+
+    <div class="upload-box" id="dropZone">
+      <input type="file" id="fileInput" accept="audio/*" hidden>
+      <button class="btn btn-primary" id="uploadBtn">音声ファイルを選択</button>
+      <p class="upload-hint">またはここにドラッグ&amp;ドロップ</p>
+      <p class="file-name" id="fileName">未選択 — NO SIGNAL</p>
+    </div>
+
+    <div class="waveform-wrap">
+      <canvas id="waveform" width="640" height="90"></canvas>
+      <div class="playhead" id="playhead"></div>
+    </div>
+
+    <div class="transport">
+      <button class="btn btn-transport" id="playDryBtn" disabled title="ノイズなしで再生">原音 再生</button>
+      <button class="btn btn-transport btn-accent" id="playWetBtn" disabled title="現在のノイズ設定で再生">▶ ノイズ適用 再生</button>
+      <button class="btn btn-transport" id="stopBtn" disabled>■ 停止</button>
+      <div class="time-readout"><span id="timeCur">00:00</span> / <span id="timeDur">00:00</span></div>
+    </div>
+    <div class="render-status" id="renderStatus" aria-live="polite"></div>
+  </section>
+
+  <!-- ============ CENTER: NOISE EFFECTS ============ -->
+  <section class="panel panel-noise">
+    <h2 class="panel-title">02 / ノイズエフェクト <span class="panel-title-en">DEGRADATION</span></h2>
+
+    <div class="gauge-list" id="gaugeList"><!-- injected by JS --></div>
+
+    <div class="master-row">
+      <label class="master-label">総合劣化レベル</label>
+      <div class="master-meter"><div class="master-meter-fill" id="masterMeterFill"></div></div>
+      <span class="master-value" id="masterValue">0%</span>
+    </div>
+  </section>
+
+  <!-- ============ RIGHT: FAVORITES ============ -->
+  <section class="panel panel-favorites">
+    <h2 class="panel-title">03 / お気に入り設定 <span class="panel-title-en">PRESETS</span></h2>
+    <p class="panel-desc">よく使う劣化パターンを3枠まで保存し、訓練中に即座に呼び出せます。</p>
+    <div class="favorites-list" id="favoritesList"><!-- injected by JS --></div>
+  </section>
+
+  <!-- ============ BOTTOM: TRAINING SCENARIO ============ -->
+  <section class="panel panel-training">
+    <h2 class="panel-title">04 / 訓練シナリオ <span class="panel-title-en">SCENARIO &amp; DEBRIEF</span></h2>
+
+    <div class="training-grid">
+
+      <div class="training-col">
+        <h3 class="col-title">シナリオ情報（任意）</h3>
+        <label class="field-label" for="callsignInput">コールサイン</label>
+        <input type="text" id="callsignInput" class="text-input" placeholder="例）JASDF 01">
+        <label class="field-label" for="situationInput">状況設定メモ</label>
+        <textarea id="situationInput" class="text-area" rows="3" placeholder="例）進入管制、高度・針路変更指示のやり取り 等"></textarea>
+      </div>
+
+      <div class="training-col">
+        <h3 class="col-title">あなたの解答</h3>
+        <label class="field-label" for="heardInput">相手は何を話しているか（聴取内容）</label>
+        <textarea id="heardInput" class="text-area" rows="3" placeholder="聞き取った内容を書き取る"></textarea>
+        <label class="field-label" for="responseInput">自分は何を返すべきか（応答文）</label>
+        <textarea id="responseInput" class="text-area" rows="3" placeholder="復唱・応答すべき内容を記述"></textarea>
+      </div>
+
+      <div class="training-col">
+        <h3 class="col-title">
+          模範解答（事前登録）
+          <button class="btn btn-small" id="toggleAnswerBtn">解答を表示</button>
+        </h3>
+        <label class="field-label" for="answerHeardInput">正解：聴取内容</label>
+        <textarea id="answerHeardInput" class="text-area answer-field" rows="3" placeholder="出題者があらかじめ正解を記入しておく"></textarea>
+        <label class="field-label" for="answerResponseInput">模範応答例</label>
+        <textarea id="answerResponseInput" class="text-area answer-field" rows="3" placeholder="出題者があらかじめ模範応答を記入しておく"></textarea>
+      </div>
+
+    </div>
+
+    <div class="training-actions">
+      <button class="btn" id="clearAttemptBtn">解答欄をクリア（次回訓練へ）</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  <span>LOCAL SESSION — データは端末内（ブラウザ）にのみ保存されます</span>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
