@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>航空管制 無線交信 聴取訓練システム</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0f0a'/%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%2339ff88' stroke-width='2'/%3E%3Cline x1='16' y1='4' x2='16' y2='28' stroke='%2339ff88' stroke-width='1'/%3E%3Cline x1='4' y1='16' x2='28' y2='16' stroke='%2339ff88' stroke-width='1'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="hud-frame">
+
+  <header class="app-header">
+    <div class="header-left">
+      <div class="badge-mark">JASDF</div>
+      <div class="title-block">
+        <h1>航空管制 無線交信 聴取訓練システム</h1>
+        <p class="subtitle">R/T LISTENING &amp; RESPONSE TRAINER <span class="dot">・</span> 訓練用（非公式ツール）</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="clock" id="clock">--:--:--Z</div>
+      <div class="status-lamp" id="ctxStatus" data-state="idle">
+        <span class="lamp"></span><span class="lamp-label">AUDIO ENGINE</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="console-grid">
+
+    <!-- LEFT: Clip Library -->
+    <section class="panel panel-library">
+      <h2 class="panel-title">01 <span>音声ライブラリ / SOURCE TAPES</span></h2>
+
+      <div class="upload-box" id="dropZone">
+        <input type="file" id="fileInput" accept="audio/*" multiple hidden>
+        <button type="button" class="btn btn-outline" id="uploadBtn">＋ 音声ファイルを追加</button>
+        <p class="hint">クリックまたはドラッグ＆ドロップで .wav / .mp3 等を取込</p>
+      </div>
+
+      <ul class="clip-list" id="clipList">
+        <li class="clip-empty">音声が登録されていません</li>
+      </ul>
+
+      <div class="answer-key-box" id="answerKeyBox" hidden>
+        <h3>模範解答の登録（任意・自己採点用）</h3>
+        <label>聞き取り正解（送信内容）
+          <textarea id="keyTranscript" rows="3" placeholder="例）Ghost 1-1, radar contact, climb and maintain flight level two-five-zero"></textarea>
+        </label>
+        <label>模範応答（管制官の返答例）
+          <textarea id="keyResponse" rows="3" placeholder="例）Climb and maintain flight level two-five-zero, Ghost 1-1"></textarea>
+        </label>
+        <button class="btn btn-small" id="saveKeyBtn">登録</button>
+      </div>
+    </section>
+
+    <!-- CENTER: Console -->
+    <section class="panel panel-console">
+      <h2 class="panel-title">02 <span>交信再生 / COMMS PLAYBACK</span></h2>
+
+      <div class="now-playing">
+        <span class="np-label">SELECTED TAPE</span>
+        <span class="np-name" id="npName">― 未選択 ―</span>
+      </div>
+
+      <div class="ptt-area">
+        <button class="ptt-btn" id="playBtn" disabled>
+          <span class="ptt-icon">▶</span>
+          <span class="ptt-text">PLAY</span>
+        </button>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="time-readout"><span id="timeCur">0:00</span> / <span id="timeDur">0:00</span></div>
+      </div>
+
+      <div class="reveal-flow" id="revealFlow" hidden>
+        <div class="answer-grid">
+          <label>Q1. 相手は何を話しているか？（聞き取り）
+            <textarea id="myTranscript" rows="3" placeholder="聞き取った交信内容を記入"></textarea>
+          </label>
+          <label>Q2. 自分はそれに対して何を返すべきか？（応答）
+            <textarea id="myResponse" rows="3" placeholder="管制官として返す応答を記入"></textarea>
+          </label>
+        </div>
+        <div class="flow-actions">
+          <button class="btn btn-primary" id="checkBtn">解答を確認する</button>
+          <button class="btn btn-outline" id="replayBtn">同条件で再生</button>
+        </div>
+
+        <div class="model-answer" id="modelAnswer" hidden>
+          <h3>模範解答</h3>
+          <div class="model-answer-grid">
+            <div><span class="ma-tag">TRANSCRIPT</span><p id="maTranscript">―</p></div>
+            <div><span class="ma-tag">RESPONSE</span><p id="maResponse">―</p></div>
+          </div>
+          <div class="self-score">
+            <span>自己判定：</span>
+            <button class="score-btn score-ok" data-score="ok">◎ 完全に聴取</button>
+            <button class="score-btn score-mid" data-score="mid">△ 部分的</button>
+            <button class="score-btn score-ng" data-score="ng">✕ 聴取不可</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="session-log">
+        <h3>本日の訓練ログ <span id="sessionCount">0</span> 件</h3>
+        <ol id="sessionLogList"></ol>
+      </div>
+    </section>
+
+    <!-- RIGHT: Noise Console -->
+    <section class="panel panel-noise">
+      <h2 class="panel-title">03 <span>ノイズ・エフェクト卓 / DEGRADATION</span></h2>
+
+      <div class="favorites-row">
+        <span class="fav-label">お気に入り</span>
+        <div class="fav-slots" id="favSlots"></div>
+      </div>
+
+      <div class="sliders" id="sliderRack"></div>
+
+      <div class="preset-actions">
+        <button class="btn btn-outline btn-small" id="resetSlidersBtn">全て0にリセット</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>本システムは聴取訓練を目的とした非公式の学習支援ツールです。実際の管制業務・機体運用とは無関係です。</p>
+  </footer>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/noise.js"></script>
+<script src="js/audio-engine.js"></script>
+<script src="js/presets.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
