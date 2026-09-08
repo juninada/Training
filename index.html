@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JASDF R/T TRAINER — 無線通信聴取訓練</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="hud-grid" aria-hidden="true"></div>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-badge">
+      <svg viewBox="0 0 100 100" class="badge-icon" aria-hidden="true">
+        <circle cx="50" cy="50" r="46" class="badge-ring-outer"/>
+        <circle cx="50" cy="50" r="32" class="badge-ring-inner"/>
+        <line x1="50" y1="4" x2="50" y2="96" class="badge-cross"/>
+        <line x1="4" y1="50" x2="96" y2="50" class="badge-cross"/>
+        <circle cx="50" cy="50" r="5" class="badge-dot"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <h1>JASDF R/T TRAINER</h1>
+      <p class="brand-sub">航空無線通信 聴取判断訓練システム</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab-btn active" data-tab="training" role="tab" aria-selected="true">TRAINING</button>
+    <button class="tab-btn" data-tab="scenario" role="tab" aria-selected="false">SCENARIO LIB</button>
+  </nav>
+  <div class="status-strip">
+    <span class="status-dot" id="engineStatusDot"></span>
+    <span id="engineStatusText">AUDIO ENGINE STANDBY</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ TRAINING TAB ============ -->
+  <section class="tab-panel active" id="panel-training">
+
+    <div class="training-layout">
+
+      <!-- LEFT: scenario select + player -->
+      <div class="col col-main">
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-tag">01</span>
+            <h2>交信シナリオ選択</h2>
+          </div>
+          <div class="panel-body">
+            <select id="scenarioSelect" class="select-field">
+              <option value="">-- シナリオを選択 --</option>
+            </select>
+            <p class="hint" id="scenarioMeta">シナリオ管理タブから音声と書き起こしを登録してください。</p>
+          </div>
+        </div>
+
+        <div class="panel player-panel">
+          <div class="panel-head">
+            <span class="panel-tag">02</span>
+            <h2>交信再生</h2>
+            <span class="rec-indicator" id="recIndicator"><i></i>ON AIR</span>
+          </div>
+          <div class="panel-body">
+            <div class="scope" id="scopeCanvasWrap">
+              <canvas id="scopeCanvas" width="640" height="120"></canvas>
+              <div class="scope-sweep" id="scopeSweep"></div>
+            </div>
+            <div class="transport">
+              <button id="btnRender" class="btn btn-outline" disabled>
+                <span>① ノイズ適用</span>
+              </button>
+              <button id="btnPlay" class="btn btn-primary" disabled>
+                <span id="btnPlayLabel">▶ 再生</span>
+              </button>
+              <div class="time-readout"><span id="timeNow">00:00</span> / <span id="timeTotal">00:00</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-tag">03</span>
+            <h2>聴取内容の判断・応答</h2>
+          </div>
+          <div class="panel-body">
+            <label class="field-label">パイロットは何を話しているか（聴取内容）</label>
+            <textarea id="answerHeard" class="text-field" rows="3" placeholder="例：JA123, request taxi to runway 34 via taxiway Bravo."></textarea>
+
+            <label class="field-label">自分は何を応答すべきか（管制応答）</label>
+            <textarea id="answerReply" class="text-field" rows="3" placeholder="例：JA123, taxi to runway 34 via Bravo, hold short of runway 34."></textarea>
+
+            <div class="check-row">
+              <button id="btnCheck" class="btn btn-accent" disabled>解答照合</button>
+              <button id="btnReset" class="btn btn-ghost">クリア</button>
+            </div>
+
+            <div class="answer-key" id="answerKey" hidden>
+              <div class="answer-key-block">
+                <span class="ak-label">MODEL — 発話内容</span>
+                <p id="keyHeard"></p>
+              </div>
+              <div class="answer-key-block">
+                <span class="ak-label">MODEL — 模範応答</span>
+                <p id="keyReply"></p>
+              </div>
+              <div class="self-rate">
+                <span>自己評価:</span>
+                <button class="rate-btn rate-good" data-rate="good">聴取できた</button>
+                <button class="rate-btn rate-bad" data-rate="bad">聴取できなかった</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: effects + presets -->
+      <div class="col col-side">
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-tag">FAV</span>
+            <h2>お気に入りプリセット</h2>
+          </div>
+          <div class="panel-body">
+            <div class="preset-grid" id="presetGrid"></div>
+            <button id="btnSavePreset" class="btn btn-outline btn-block">現在の設定をお気に入りに保存</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-tag">FX</span>
+            <h2>ノイズエフェクト強度</h2>
+          </div>
+          <div class="panel-body" id="effectControls">
+            <!-- injected by app.js -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- ============ SCENARIO LIBRARY TAB ============ -->
+  <section class="tab-panel" id="panel-scenario">
+
+    <div class="scenario-layout">
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-tag">NEW</span>
+          <h2>シナリオ登録</h2>
+        </div>
+        <div class="panel-body">
+          <label class="field-label">シナリオ名</label>
+          <input type="text" id="scnName" class="text-field-single" placeholder="例：離陸許可 / RWY34">
+
+          <label class="field-label">音声ファイル（パイロット交信）</label>
+          <div class="file-drop" id="fileDrop">
+            <input type="file" id="scnAudioFile" accept="audio/*" hidden>
+            <p id="fileDropLabel">クリックまたはドラッグ＆ドロップで音声ファイルを選択</p>
+          </div>
+          <audio id="scnAudioPreview" controls hidden></audio>
+
+          <label class="field-label">書き起こし（パイロット発話内容）</label>
+          <textarea id="scnHeard" class="text-field" rows="2" placeholder="例：JA123, request taxi to runway 34 via taxiway Bravo."></textarea>
+
+          <label class="field-label">模範応答（管制官の応答）</label>
+          <textarea id="scnReply" class="text-field" rows="2" placeholder="例：JA123, taxi to runway 34 via Bravo, hold short of runway 34."></textarea>
+
+          <button id="btnSaveScenario" class="btn btn-primary btn-block">シナリオを保存</button>
+          <p class="hint" id="scenarioSaveHint"></p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-tag">LIB</span>
+          <h2>登録済みシナリオ</h2>
+        </div>
+        <div class="panel-body">
+          <div class="scenario-list" id="scenarioList"></div>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  <span>JASDF R/T TRAINER — LOCAL TRAINING USE ONLY</span>
+</footer>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/storage.js"></script>
+<script src="js/audio-engine.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
